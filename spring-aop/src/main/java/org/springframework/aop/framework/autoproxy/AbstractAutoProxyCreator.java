@@ -16,19 +16,9 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aopalliance.aop.Advice;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.TargetSource;
@@ -49,6 +39,10 @@ import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostP
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
@@ -244,13 +238,20 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	@Override
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
+		// 获取 缓存键
 		Object cacheKey = getCacheKey(beanClass, beanName);
 
+		// 1. 如果beanName为空，则说明是生成的cacheKey是类名,则有可能是不应该被代理的基础类
+		// || 2. 还没有被代理过
 		if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
+			// 如果bean已经被代理过，无需代理
 			if (this.advisedBeans.containsKey(cacheKey)) {
 				return null;
 			}
+			// 如果beanClass是被应该跳过的或者不应该被代理的基础类
 			if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
+				// 设置 不需要代理，这样下次再进来不会被代理
+
 				this.advisedBeans.put(cacheKey, Boolean.FALSE);
 				return null;
 			}
@@ -258,7 +259,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 		// Create proxy here if we have a custom TargetSource.
 		// Suppresses unnecessary default instantiation of the target bean:
+		// 禁止目标bean的不必要的默认实例化：
 		// The TargetSource will handle target instances in a custom fashion.
+		//TargetSource将以自定义方式处理目标实例。
 		TargetSource targetSource = getCustomTargetSource(beanClass, beanName);
 		if (targetSource != null) {
 			if (StringUtils.hasLength(beanName)) {
@@ -307,6 +310,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	/**
 	 * Build a cache key for the given bean class and bean name.
+	 * 	 * 为给定的bean类和bean名称构建CacheKey
+     *
 	 * <p>Note: As of 4.2.3, this implementation does not return a concatenated
 	 * class/name String anymore but rather the most efficient cache key possible:
 	 * a plain bean name, prepended with {@link BeanFactory#FACTORY_BEAN_PREFIX}
@@ -318,6 +323,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 */
 	protected Object getCacheKey(Class<?> beanClass, @Nullable String beanName) {
 		if (StringUtils.hasLength(beanName)) {
+			// 如果是FactoryBean，因为这种类型会存在两个Bean。原始的FactoryBean是 &+name ，getObject创建的是 name
 			return (FactoryBean.class.isAssignableFrom(beanClass) ?
 					BeanFactory.FACTORY_BEAN_PREFIX + beanName : beanName);
 		}
@@ -362,6 +368,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	/**
 	 * Return whether the given bean class represents an infrastructure class
 	 * that should never be proxied.
+	 * 返回给定的bean类是否代表永远不应代理的基础结构类
+	 *
 	 * <p>The default implementation considers Advices, Advisors and
 	 * AopInfrastructureBeans as infrastructure classes.
 	 * @param beanClass the class of the bean

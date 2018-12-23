@@ -16,8 +16,6 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.util.List;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.support.AopUtils;
@@ -26,6 +24,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.List;
 
 /**
  * Generic auto proxy creator that builds AOP proxies for specific beans
@@ -67,7 +67,13 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 		this.advisorRetrievalHelper = new BeanFactoryAdvisorRetrievalHelperAdapter(beanFactory);
 	}
 
-
+	/**
+	 * 获取bean的advisor和advice
+	 * @param beanClass the class of the bean to advise
+	 * @param beanName the name of the bean
+	 * @param targetSource
+	 * @return
+	 */
 	@Override
 	@Nullable
 	protected Object[] getAdvicesAndAdvisorsForBean(
@@ -82,6 +88,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 
 	/**
 	 * Find all eligible Advisors for auto-proxying this class.
+	 * 查找所有的合适的advisors 自动代理这个class
 	 * @param beanClass the clazz to find advisors for
 	 * @param beanName the name of the currently proxied bean
 	 * @return the empty List, not {@code null},
@@ -92,8 +99,11 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
+		// 过滤合适的advisor
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+		// 给子类的钩子
 		extendAdvisors(eligibleAdvisors);
+		// 对advisor排序
 		if (!eligibleAdvisors.isEmpty()) {
 			eligibleAdvisors = sortAdvisors(eligibleAdvisors);
 		}

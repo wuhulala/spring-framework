@@ -16,16 +16,16 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.aspectj.autoproxy.AspectJAwareAdvisorAutoProxyCreator;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * {@link AspectJAwareAdvisorAutoProxyCreator} subclass that processes all AspectJ
@@ -89,8 +89,11 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 	@Override
 	protected List<Advisor> findCandidateAdvisors() {
 		// Add all the Spring advisors found according to superclass rules.
+		// 添加根据父类的rule找到的所有Spring advisor
 		List<Advisor> advisors = super.findCandidateAdvisors();
+
 		// Build Advisors for all AspectJ aspects in the bean factory.
+		// 构造所有合适的advisor，比如自己配置的serviceInterceptor
 		if (this.aspectJAdvisorsBuilder != null) {
 			advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
 		}
@@ -107,6 +110,12 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 		// proxied by that interface and fail at runtime as the advice method is not
 		// defined on the interface. We could potentially relax the restriction about
 		// not advising aspects in the future.
+		//以前我们在构造函数中setProxyTargetClass（true），但这也有很大的影响。,  2018.12.23
+		// 相反，我们现在覆盖isInfrastructureClass以避免代理aspects。,
+		// 我并不完全满意，因为没有任何理由不建议方面，除了它导致建议调用通过代理，
+		// 如果aspect implements 例如Ordered接口它将被代理, 通过该接口并在运行时失败
+		// ，因为在接口上没有定义advice method。, 我们可以放松对此的限制。not advising aspects
+
 		return (super.isInfrastructureClass(beanClass) ||
 				(this.aspectJAdvisorFactory != null && this.aspectJAdvisorFactory.isAspect(beanClass)));
 	}
@@ -144,6 +153,11 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 			super(beanFactory, advisorFactory);
 		}
 
+		/**
+		 * 是否是合格的bean 2018.12.22
+		 * @param beanName the name of the aspect bean
+		 * @return
+		 */
 		@Override
 		protected boolean isEligibleBean(String beanName) {
 			return AnnotationAwareAspectJAutoProxyCreator.this.isEligibleAspectBean(beanName);
